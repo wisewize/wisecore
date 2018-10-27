@@ -1,4 +1,4 @@
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 import Logger from '../common/logger';
 import Container, { inject } from '../common/container';

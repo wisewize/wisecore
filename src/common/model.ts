@@ -1,4 +1,4 @@
-import * as flatten from 'flat';
+import flatten from 'flat';
 import { memoized, getLocalDate } from './util';
 
 enum ModelRelation {

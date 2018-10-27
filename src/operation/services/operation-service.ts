@@ -1,5 +1,5 @@
-import * as os from 'os';
-import * as process from 'process';
+import os from 'os';
+import process from 'process';
 
 import Service from '../../common/service';
 import { NoResourceError, ConflictError } from '../../common/errors';

@@ -1,6 +1,6 @@
 import { Injectable } from './container';
 import Logger from './logger';
-import * as Knex from 'knex';
+import Knex from 'knex';
 
 /**
  * transactional 메소드 어노테이션

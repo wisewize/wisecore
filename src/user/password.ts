@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import crypto from 'crypto';
 import { column } from '../common/model';
 
 class Password {

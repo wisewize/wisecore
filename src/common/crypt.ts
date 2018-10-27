@@ -1,5 +1,5 @@
-import * as process from 'process';
-import * as crypto from 'crypto';
+import process from 'process';
+import crypto from 'crypto';
 
 const cryptoAlgorithm = 'aes-256-ctr';
 const cryptoKey = process.env.cryptokey || 'MUSTSETCRYPTOKEY';

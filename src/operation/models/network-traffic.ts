@@ -1,4 +1,4 @@
-import Model, { column } from '../../common/model';
+import { column } from '../../common/model';
 
 class NetworkTraffic {
   @column({ type: 'key' })
