@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es5",
     "experimentalDecorators": true,
     "module": "commonjs",
     "outDir": "lib",
     "declaration": true,
     "esModuleInterop": true,
+    "downlevelIteration": true,
     "lib": [
-      "es2017"
+      "es2017", "es2015"
     ]
   },
   "include": [
