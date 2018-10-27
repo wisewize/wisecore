@@ -12,6 +12,14 @@
     "server"
   ],
   "author": "Baek Jonghyeon",
+  "homepage": "https://github.com/wisewize/wisecore",
+  "bugs": {
+    "url": "https://github.com/wisewize/wisecore/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wisewize/wisecore.git"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/bunyan": "^1.8.5",
@@ -30,6 +38,7 @@
     "knex": "^0.15.2",
     "koa": "^2.6.1",
     "koa-body": "^4.0.4",
+    "mysql": "^2.16.0",
     "node-fetch": "^2.2.0",
     "sharp": "^0.21.0"
   }
