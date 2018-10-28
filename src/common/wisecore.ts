@@ -50,6 +50,8 @@ class Wisecore {
       name: 'wisecore',
       level: this.config.logLevel || 'info'
     });
+
+    this.scanner.excludes = this.config.excludes || [];
   }
 
   async setup() {
@@ -116,7 +118,7 @@ class Wisecore {
 
     const server = this.listen(port);
 
-    // API 트래픽 측정
+    // measure API traffics
     const serverTraffics = new Set<NetworkTrafficSize>();
 
     this.container.set('serverTraffics', () => () => serverTraffics);
