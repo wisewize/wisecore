@@ -1,17 +1,28 @@
 
 interface DatabaseConfiguration {
+  [propName: string]: any;
   engine: string;
   connection?: any;
   storageSize?: number;
 }
 
 interface UserConfiguration {
+  [propName: string]: any;
   avatarSize: { width: number, height: number };
 }
 
 interface NetworkConfiguration {
   reversedXff?: boolean;
   trafficSize?: number;
+}
+
+interface StorageConfiguration {
+  [propName: string]: any;
+  storageSize: number;
+  baseDir?: string;
+  uploadDir?: string;
+  bucketBaseKey?: string;
+  bucket?: string;
 }
 
 interface Configuration {
@@ -23,6 +34,7 @@ interface Configuration {
   jwt?: { secret: string, expiresIn: string },
   user?: UserConfiguration;
   network?: NetworkConfiguration;
+  storage?: StorageConfiguration;
 }
 
 export default Configuration;
