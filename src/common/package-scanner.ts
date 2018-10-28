@@ -2,7 +2,8 @@ import fs from 'fs';
 import Package, { UnknownPackage } from './package';
 
 class PackageScanner {
-  private packages: Package[] = [];
+  public packages: Package[] = [];
+  public excludes: string[] = [];
   private unknownPackage = new UnknownPackage();
 
   getPackages() {
@@ -36,14 +37,20 @@ class PackageScanner {
                 throw new Error('Multiple nested packages are not allowed.');
               }
 
-              currentPackage = new m();
+              const nextPackage = new m();
 
               // set alias to its parent directory name if null
-              if (!currentPackage.alias) {
-                currentPackage.alias = rootDir.split('/').pop();
+              if (!nextPackage.alias) {
+                nextPackage.alias = rootDir.split('/').pop();
               }
 
-              this.packages.push(currentPackage);
+              nextPackage.dir = rootDir;
+
+              // don't include if in excludes
+              if (this.excludes.indexOf(nextPackage.alias) < 0) {
+                currentPackage = nextPackage;
+                this.packages.push(currentPackage);
+              }
             } else {
               modules.push(m);
             }
@@ -96,12 +103,22 @@ class PackageScanner {
   }
 
   private sortPackagesByDependencyOrder(packages: Package[]) {
-    let marks = new Set<string>();
-    let stack: Package[] = [];
+    const marks = new Set<string>();
+    const stack: Package[] = [];
     let loop = 0;
 
+    // check dependency existence
+    for (const p of packages) {
+      for (const dependencyAlias of p.dependencies) {
+        if (!packages.some(q => q.alias === dependencyAlias)) {
+          throw new Error('Package dependency not found: ' + dependencyAlias);
+        }
+      }
+    }
+
+    // check dependency loop
     while (packages.length !== marks.size) {
-      for (let p of packages) {
+      for (const p of packages) {
         if (!marks.has(p.alias) && p.dependencies.every(alias => marks.has(alias))) {
           stack.push(p);
           marks.add(p.alias);
