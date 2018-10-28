@@ -17,7 +17,6 @@ class FileService extends Service {
   static deletingUnreferencedFiles = false;
 
   @inject() auth: Authentication;
-  @inject() config: any;
   @inject() storageService: StorageService;
   @inject() fileRepository: FileRepository;
   @inject() fileUploader: Uploader;
