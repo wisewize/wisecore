@@ -18,7 +18,7 @@ interface NetworkConfiguration {
 
 interface StorageConfiguration {
   [propName: string]: any;
-  storageSize: number;
+  storageSize?: number;
   baseDir?: string;
   uploadDir?: string;
   bucketBaseKey?: string;

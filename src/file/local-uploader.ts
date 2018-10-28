@@ -9,7 +9,8 @@ class LocalUploader extends Uploader {
 
   getUploadDir() {
     const date = new Date();
-    return `${this.config.storage.baseDir}/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+    const baseDir = this.config.storage.baseDir || '';
+    return `${baseDir}/${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   }
 
   async copyFile(source, target) {

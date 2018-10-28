@@ -13,16 +13,17 @@ class StorageService extends Service {
   @inject() configService: ConfigService;
   @inject() storageRepository: StorageRepository;
   @inject() notificationService: NotificationService;
+  @inject() fileUploader;
 
   async getFileSystemInfo() {
     let storageConfig = await this.configService.get('storage');
     let used = await this.storageRepository.getUsedSize();
 
     return {
-      uploader: storageConfig.uploader,
+      uploader: this.fileUploader.constructor.name,
       storage: {
         used, 
-        total: storageConfig.storageSize
+        total: storageConfig.storageSize || 0
       }
     };
   }
@@ -84,7 +85,7 @@ class StorageService extends Service {
   async canUpload() {
     let storageConfig = await this.configService.get('storage');
 
-    if (StorageService.usedSize >= storageConfig.storageSize) {
+    if (storageConfig.storageSize && (StorageService.usedSize >= storageConfig.storageSize)) {
       return false;
     }
 
