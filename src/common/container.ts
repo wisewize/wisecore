@@ -49,6 +49,11 @@ class Container {
 
   set(key: string, builder: ModuleGetterBuilder) {
     this.builders[key] = builder;
+
+    // delete old module
+    if (key in this.getters) {
+      delete this.getters[key];
+    }
   }
 
   fork() {
