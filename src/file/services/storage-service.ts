@@ -13,14 +13,14 @@ class StorageService extends Service {
   @inject() configService: ConfigService;
   @inject() storageRepository: StorageRepository;
   @inject() notificationService: NotificationService;
-  @inject() fileUploader;
+  @inject() uploader;
 
   async getFileSystemInfo() {
     let storageConfig = await this.configService.get('storage');
     let used = await this.storageRepository.getUsedSize();
 
     return {
-      uploader: this.fileUploader.constructor.name,
+      uploader: this.uploader.constructor.name,
       storage: {
         used, 
         total: storageConfig.storageSize || 0

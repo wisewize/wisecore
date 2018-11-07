@@ -8,18 +8,34 @@ import Service from '../../common/service';
 import { NoResourceError, ConflictError, CommonError } from '../../common/errors';
 import { scheduled } from '../../common/task';
 import Authentication from '../../user/authentication';
-import ImageFile from '../image-file';
-import Uploader from '../uploader';
 import StorageService from '../services/storage-service';
 import FileRepository from '../repositories/file-repository';
+import Uploader from '../uploader';
+import UploadStrategy from '../upload-strategy';
+import imageUploadStrategy from '../image-upload-strategy';
+
+const defaultUploadStrategy: UploadStrategy = async function (uploader, storage, file) {
+  const url = await uploader.uploadFile(file.path, file.name, file.type);
+  const fileSize = file.size;
+
+  return {
+    url,
+    size: fileSize,
+    type: file.type,
+    name: file.name
+  };
+}
 
 class FileService extends Service {
   static deletingUnreferencedFiles = false;
+  static uploadStrategies: { [typeRegexp: string]: UploadStrategy } = {
+    'image/*': imageUploadStrategy
+  };
 
   @inject() auth: Authentication;
   @inject() storageService: StorageService;
   @inject() fileRepository: FileRepository;
-  @inject() fileUploader: Uploader;
+  @inject() uploader: Uploader;
 
   async getFile(fileId) {
     let file = await this.fileRepository.getOne(fileId);
@@ -40,7 +56,6 @@ class FileService extends Service {
   async uploadFile(storageId, file) {
     try {
       let storage = await this.storageService.getStorage(storageId);
-      let isImage = file.type.indexOf('image/') >= 0;
 
       if (!await this.storageService.canUpload()) {
         throw new CommonError(500, '스토리지에 업로드할 수 있는 용량이 가득찼습니다. 관리자에게 문의하여 용량을 업그레이드해주세요.');
@@ -51,51 +66,26 @@ class FileService extends Service {
       }
 
       if (storage.maxSize && file.size > storage.maxSize) {
-        // skip file size limit if maxWidth or maxHeight is defined
-        if (!isImage || !(storage.maxWidth || storage.maxHeight)) {
-          throw new ConflictError(`스토리지(${storage.name})에 업로드할 수 있는 파일 크기가 아닙니다.`);
+        throw new ConflictError(`스토리지(${storage.name})에 업로드할 수 있는 파일 크기가 아닙니다.`);
+      }
+
+      let strategy = defaultUploadStrategy;
+
+      for (const pattern in FileService.uploadStrategies) {
+        const r = new RegExp(pattern, 'i');
+
+        if (r.test(file.type)) {
+          strategy = FileService.uploadStrategies[pattern];
+          break;
         }
       }
 
-      let url = null;
-      let fileSize = 0;
-      let thumbUrl = null;
-      let thumbSize = 0;
-
-      // create a thumbnail
-      if (isImage) {
-        let info = await this.thumbnailImage(file, storage.thumbWidth, storage.thumbHeight);
-        thumbUrl = await this.fileUploader.uploadFile(info.path, file.name + '_thumb.png', 'image/png');
-        thumbSize = info.size;
-        fs.unlinkSync(info.path);
-      }
-
-      // resize image if maxWidth or maxHeight is defined
-      if (isImage && (storage.maxWidth || storage.maxHeight)) {
-        let info = await this.resizeImage(file, storage.maxWidth, storage.maxHeight);
-
-        if (info) {
-          url = await this.fileUploader.uploadFile(info.path, file.name, file.type);
-          fileSize = info.size;
-          fs.unlinkSync(info.path);
-        } else {
-          url = await this.fileUploader.uploadFile(file.path, file.name, file.type);
-          fileSize = file.size;
-        }
-      } else {
-        url = await this.fileUploader.uploadFile(file.path, file.name, file.type);
-        fileSize = file.size;
-      }
-
-      let insertId = await this.fileRepository.create({
+      const uploadResult = await strategy(this.uploader, storage, file);
+      const insertId = this.fileRepository.create({
         storageId,
         ownerId: this.auth.user.id,
-        url,
-        name: file.name,
-        size: fileSize + thumbSize,
-        type: file.type,
-        refCount: 0,
-        thumbUrl
+        ...uploadResult,
+        refCount: 0
       });
 
       fs.unlinkSync(file.path);
@@ -121,10 +111,10 @@ class FileService extends Service {
     }
 
     await this.fileRepository.del(fileId);
-    await this.fileUploader.deleteFile(file.url);
+    await this.uploader.deleteFile(file.url);
 
     if (file.thumbUrl) {
-      await this.fileUploader.deleteFile(file.thumbUrl);
+      await this.uploader.deleteFile(file.thumbUrl);
     }
   }
 
@@ -153,65 +143,8 @@ class FileService extends Service {
     await this.fileRepository.update(fileId, { refCount: file.refCount - 1});
   }
 
-  private async thumbnailImage(file, width, height) {
-    const imgDir = path.dirname(file.path);
-    const ext = path.extname(file.name);
-    const name = path.basename(file.name, ext);
-    const resizePath = path.join(imgDir, name + '_thumb.png');
-
-    let image = new ImageFile();
-
-    await image.load(file.path);
-    await image.resize(width || 100, height || 100);
-
-    let fileSize = await image.save(resizePath);
-
-    return {
-      path: resizePath,
-      size: fileSize
-    };
-  }
-
-  private async resizeImage(file, width, height) {
-    const imgDir = path.dirname(file.path);
-    const ext = path.extname(file.name);
-    const name = path.basename(file.name, ext);
-    const resizePath = path.join(imgDir, name + '_resize' + ext);
-
-    let image = new ImageFile();
-
-    await image.load(file.path);
-
-    let resizeWidth = image.width;
-    let resizeHeight = image.height;
-
-    if (width && resizeWidth > width) {
-      resizeHeight = Math.floor(resizeHeight * (width / resizeWidth));
-      resizeWidth = width;
-    }
-
-    if (height && resizeHeight > height) {
-      resizeWidth = Math.floor(resizeWidth * (height / resizeHeight));
-      resizeHeight = height;
-    }
-
-    // null if resizing is useless
-    if (resizeWidth === image.width && resizeHeight === image.height) {
-      return null;
-    }
-
-    await image.resize(resizeWidth, resizeHeight);
-
-    let fileSize = await image.save(resizePath);
-
-    return {
-      path: resizePath,
-      size: fileSize
-    };
-  }
-
   /**
-   * 인터넷 URL로부터 파일을 로컬로 다운로드하여 FileDescriptor를 반환함.
+   * Download a file from internet URL and return FileDescriptor
    * @param fileUrl 
    */
   async downloadFile(fileUrl) {
@@ -253,10 +186,10 @@ class FileService extends Service {
 
         if (createDate < delayedDate) {
           await this.fileRepository.del(file.id);
-          await this.fileUploader.deleteFile(file.url);
+          await this.uploader.deleteFile(file.url);
 
           if (file.thumbUrl) {
-            await this.fileUploader.deleteFile(file.thumbUrl);
+            await this.uploader.deleteFile(file.thumbUrl);
           }
 
           count++;
