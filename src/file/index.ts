@@ -6,7 +6,7 @@ class FilePackage extends Package {
 
   async setup(app) {
     // set LocalUploader as default
-    app.container.set(container => {
+    app.container.set('uploader', container => {
       const localUploader = new LocalUploader(container);
       return () => localUploader;
     });
