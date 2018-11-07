@@ -1,3 +1,4 @@
+import Wisecore from './wisecore';
 import Schema from './schema';
 
 abstract class Package {
@@ -11,7 +12,7 @@ abstract class Package {
   constructor() {
   }
 
-  async setup(app: any) {
+  async setup(wisecore: Wisecore) {
   }
 }
 
