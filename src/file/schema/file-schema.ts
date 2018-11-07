@@ -38,6 +38,7 @@ class FileSchema extends Schema {
         t.integer('size').notNullable();
         t.string('type', 50).notNullable();
         t.string('thumbUrl', 255).nullable();
+        t.string('info', 255).nullable();
         t.integer('refCount').notNullable().defaultTo(0);
         t.timestamp('createdAt').notNullable().defaultTo(db.fn.now());
       });

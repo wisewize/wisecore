@@ -19,6 +19,9 @@ class FileSummary {
 
   @column({ type: 'string', max: 255, required: false })
   thumbUrl: string;
+
+  @column({ type: 'json', required: false })
+  info: any;
 }
 
 export default FileSummary;
