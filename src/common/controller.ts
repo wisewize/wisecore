@@ -22,7 +22,7 @@ interface RouteMetadata {
   parameterHandlers: RouteHandler[];
 }
 
-let routeMetadataMap = new Map<any, RouteMetadata>();
+const routeMetadataMap = new Map<any, RouteMetadata>();
 
 function getRouteMetadata(method: any) {
   let metadata = routeMetadataMap.get(method);
@@ -49,7 +49,7 @@ function getRouteMetadata(method: any) {
  */
 function route(method: string, pattern: string): any {
   return function (target: any, key: string, descriptor: PropertyDescriptor): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     Object.assign(metadata, {
       httpMethod: method,
@@ -65,7 +65,7 @@ function route(method: string, pattern: string): any {
  */
 function pathParam(name: string): any {
   return function (target: any, key: string, index: number): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.parameterHandlers.unshift(async (ctx) => {
       if (!(name in ctx.params)) {
@@ -82,7 +82,7 @@ function pathParam(name: string): any {
  */
 function queryParam(name: string): any {
   return function (target: any, key: string, index: number): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.parameterHandlers.unshift(async (ctx) => {
       return ctx.query[name];
@@ -94,7 +94,7 @@ function queryParam(name: string): any {
  * paginated 파라미터 어노테이션
  */
 function paginated(target: any, key: string, index: number): void {
-  let metadata = getRouteMetadata(target[key]);
+  const metadata = getRouteMetadata(target[key]);
 
   metadata.parameterHandlers.unshift(async (ctx) => {
     ctx.pagination = new Pagination(ctx);
@@ -111,10 +111,10 @@ function paginated(target: any, key: string, index: number): void {
  */
 function authorize(chainCallback: (e: any) => AuthorizationBuilder): any {
   return function (target: any, key: string, descriptor: PropertyDescriptor): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.beforeMethodHandlers.unshift(async (ctx) => {
-      let authorization = ctx.container.get('authorization');
+      const authorization = ctx.container.get('authorization');
       await chainCallback(authorization.createBuilder(ctx).start());
     });
   };
@@ -125,10 +125,10 @@ function authorize(chainCallback: (e: any) => AuthorizationBuilder): any {
  */
 function postAuthorize(chainCallback: (e: any) => AuthorizationBuilder): any {
   return function (target: any, key: string, descriptor: PropertyDescriptor): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.afterMethodHandlers.unshift(async (ctx) => {
-      let authorization = ctx.container.get('authorization');
+      const authorization = ctx.container.get('authorization');
       await chainCallback(authorization.createBuilder(ctx).start());
     });
   };
@@ -137,12 +137,12 @@ function postAuthorize(chainCallback: (e: any) => AuthorizationBuilder): any {
 const MethodModelActionMappings = { POST: Model.Action.Create, PUT: Model.Action.Update, DELETE: Model.Action.Delete, GET: Model.Action.Get };
 
 function validateOrThrowError(value: any, option: ValidatorSchema) {
-  let v = new Validator();
+  const v = new Validator();
 
   if (!v.validate(value, option)) {
-    let error = new BadRequestError();
+    const error = new BadRequestError();
 
-    for (let e of v.errors) {
+    for (const e of v.errors) {
       error.addField(e.field, e.message);
     }
 
@@ -155,25 +155,25 @@ function validateOrThrowError(value: any, option: ValidatorSchema) {
  */
 function validate(model: Model | ValidatorSchema): any {
   return function (target: any, key: string, index: number): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.parameterHandlers.unshift(async (ctx) => {
-      let data = ctx.request.body;
-      let method = ctx.method.toUpperCase();
+      const data = ctx.request.body;
+      const method = ctx.method.toUpperCase();
 
       if (!ctx.is('json')) {
         throw new CommonError(415, `지원하지 않는 데이터 타입(${ctx.get('Content-Type')})입니다.`);
       }
 
-      let action = MethodModelActionMappings[method];
+      const action = MethodModelActionMappings[method];
 
       if (!action) {
         throw new Error(`VALIDATE: 지원되지 않는 HTTP 메소드${method}입니다.`);
       }
 
       if (Model.hasMetadata(model)) {
-        let modelMetadata = Model.getMetadata(model);
-        let schema = Model.getSchemaOn(action, modelMetadata);
+        const modelMetadata = Model.getMetadata(model);
+        const schema = Model.getSchemaOn(action, modelMetadata);
 
         validateOrThrowError(data, schema);
       } else {
@@ -189,10 +189,10 @@ function validate(model: Model | ValidatorSchema): any {
  * jsonBody 파라미터 어노테이션
  */
 function jsonBody(target: any, key: string, index: number): void {
-  let metadata = getRouteMetadata(target[key]);
+  const metadata = getRouteMetadata(target[key]);
 
   metadata.parameterHandlers.unshift(async (ctx) => {
-    let data = ctx.request.body;
+    const data = ctx.request.body;
 
     if (!ctx.is('json')) {
       throw new CommonError(415, `지원하지 않는 데이터 타입(${ctx.get('Content-Type')})입니다.`);
@@ -207,11 +207,12 @@ function jsonBody(target: any, key: string, index: number): void {
  */
 function formData(dataName: string): any {
   return function (target: any, key: string, index: number): void {
-    let metadata = getRouteMetadata(target[key]);
+    const metadata = getRouteMetadata(target[key]);
 
     metadata.parameterHandlers.unshift(async (ctx) => {
-      let form = ctx.request.body;
-      let data = (form.fields && form.fields[dataName]) || (form.files && form.files[dataName]) || null;
+      const fields = ctx.request.body;
+      const files = ctx.request.files;
+      const data = fields[dataName] || (files && files[dataName]) || null;
 
       return data;
     });
@@ -231,26 +232,26 @@ class ControllerMiddleware extends Middleware {
   }
 
   async run(ctx, next) {
-    let r  = this.router.find(ctx.method, ctx.path);
+    const r  = this.router.find(ctx.method, ctx.path);
 
     if (r) {
-      let { metadata, controllerClass } = r.value;
-      let controller = new controllerClass(ctx.container);
+      const { metadata, controllerClass } = r.value;
+      const controller = new controllerClass(ctx.container);
 
       ctx.params = r.params;
       ctx.controller = controller;
 
       this.log.debug({ req: ctx.request, path: ctx.path, controllerMethod: metadata.methodName }, 'Web request');
 
-      for (let handler of metadata.beforeMethodHandlers) {
+      for (const handler of metadata.beforeMethodHandlers) {
         await handler.call(controller, ctx);
       }
 
       // gather controller method parameters
-      let args = await Promise.all(metadata.parameterHandlers.map(handler => handler.call(controller, ctx)));
+      const args = await Promise.all(metadata.parameterHandlers.map(handler => handler.call(controller, ctx)));
 
       // call controller method
-      let result = await controller[metadata.methodName].apply(controller, args);
+      const result = await controller[metadata.methodName].apply(controller, args);
 
       if (result) {
         ctx.body = result;
@@ -273,7 +274,7 @@ class ControllerMiddleware extends Middleware {
         ctx.set('Pragma', 'no-cache');
       }
 
-      for (let handler of metadata.afterMethodHandlers) {
+      for (const handler of metadata.afterMethodHandlers) {
         await handler.call(controller, ctx);
       }
 
