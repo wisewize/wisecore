@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { normalize } from 'path';
 import Package, { UnknownPackage } from './package';
 
 class PackageScanner {
@@ -17,6 +18,11 @@ class PackageScanner {
   }
 
   async scan(rootDir, currentPackage: Package = this.unknownPackage) {
+    // don't allow scan common directory
+    if (normalize(rootDir).indexOf(__dirname) >= 0) {
+      return;
+    }
+
     const files = fs.readdirSync(rootDir).filter(filename => filename.indexOf('test.') < 0 && filename.indexOf('.d.ts') < 0);
     let directories = [];
     let modules = [];
