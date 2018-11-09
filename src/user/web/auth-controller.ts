@@ -11,13 +11,17 @@ class AuthController extends Controller {
   @route('POST', '/auth')
   async createAuthToken(@validate(Auth) q, @queryParam('expiresIn') expiresIn) {
     const { user, groups, authorities } = await this.userService.authenticate(q.username, q.password);
+    const jwtConfig = {
+      secret: (this.config.jwt && this.config.jwt.secret) || JwtAuthentication.defaultJwtSecret,
+      expiresIn: expiresIn || (this.config.jwt && this.config.jwt.expiresIn) || undefined
+    };
 
     return await JwtAuthentication.createToken(
       user,
       groups,
       authorities,
-      this.config.jwt.secret,
-      expiresIn || this.config.jwt.expiresIn
+      jwtConfig.secret,
+      jwtConfig.expiresIn
     );
   }
 

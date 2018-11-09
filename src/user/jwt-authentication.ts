@@ -9,6 +9,8 @@ import Authority from './models/authority';
 import User from './models/user';
 
 class JwtAuthentication implements Authentication {
+  static defaultJwtSecret = 'jwtsecret';
+
   container: Container;
   
   @inject() log: Logger;
@@ -72,7 +74,8 @@ class JwtAuthentication implements Authentication {
 
     if (this.token) {
       try {
-        jwt.verify(this.token, this.config.jwt.secret);
+        const secret = (this.config.jwt && this.config.jwt.secret) || JwtAuthentication.defaultJwtSecret;
+        jwt.verify(this.token, secret);
         this._authenticated = true;
         return true;
       } catch (e) {

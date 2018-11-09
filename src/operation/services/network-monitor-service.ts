@@ -6,6 +6,8 @@ import NotificationService from './notification-service';
 import ConfigService from './config-service';
 import NetworkTrafficRepository from '../repositories/network-traffic-repository';
 
+const defaultTrafficSize = 10737418240;
+
 class NetworkMonitorService extends Service {
   private static measuredTraffic: NetworkTrafficSize = null;
   private static systemTraffic: NetworkTrafficSize = { rx: Number.MAX_SAFE_INTEGER, tx: Number.MAX_SAFE_INTEGER };
@@ -18,10 +20,11 @@ class NetworkMonitorService extends Service {
   async getNetworkInfo() {
     const networkConfig = await this.configService.get('network');
     const traffic = await this.getTodayTraffic();
+    const trafficSize = networkConfig ? networkConfig.trafficSize : defaultTrafficSize
 
     return {
       traffic,
-      trafficSize: networkConfig.trafficSize || 10737418240
+      trafficSize
     };
   }
 
@@ -58,7 +61,7 @@ class NetworkMonitorService extends Service {
   async checkNetworkTrafficOver() {
     const traffic = await this.getTodayTraffic();
     const networkConfig = await this.configService.get('network');
-    const trafficSize = networkConfig.trafficSize || 1073741824;
+    const trafficSize = networkConfig ? networkConfig.trafficSize  : defaultTrafficSize;
 
     if (traffic.tx > trafficSize) {
       await this.notificationService.notify(
