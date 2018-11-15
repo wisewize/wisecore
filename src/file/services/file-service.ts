@@ -53,7 +53,7 @@ class FileService extends Service {
     return await this.fileRepository.getCollection(pagination, { storageId: storage.id });
   }
 
-  async uploadFile(storageId, file) {
+  async uploadFile(storageId, file, ownerId = this.auth.user.id) {
     try {
       let storage = await this.storageService.getStorage(storageId);
 
@@ -83,7 +83,7 @@ class FileService extends Service {
       const uploadResult = await strategy(this.uploader, storage, file);
       const insertId = this.fileRepository.create({
         storageId,
-        ownerId: this.auth.user.id,
+        ownerId,
         ...uploadResult,
         refCount: 0
       });
