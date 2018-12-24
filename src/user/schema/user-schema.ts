@@ -11,10 +11,6 @@ class UserSchema extends Schema {
       await db.schema.createTable('UserAvatar', t => this.createUserAvatarTable(t));
     }
 
-    if (!await db.schema.hasTable('UserTransaction')) {
-      await db.schema.createTable('UserTransaction', t => this.createUserTransactionTable(t, db));
-    }
-
     if (!await db.schema.hasTable('Group')) {
       await db.schema.createTable('Group', this.createGroupTable);
     }
@@ -43,7 +39,6 @@ class UserSchema extends Schema {
     await db.schema.dropTableIfExists('GroupAuthority');
     await db.schema.dropTableIfExists('Group');
     await db.schema.dropTableIfExists('Authority');
-    await db.schema.dropTableIfExists('UserTransaction');
     await db.schema.dropTableIfExists('UserAvatar');
     await db.schema.dropTableIfExists('User');
   }

@@ -45,6 +45,16 @@ class OperationSchema extends Schema {
       });
     }
 
+    if (!await db.schema.hasTable('BriefCertification')) {
+      await db.schema.createTable('BriefCertification', t => {
+        t.string('code', 36).notNullable().primary();
+        t.string('payload', 100).nullable();
+        t.timestamp('completedAt').nullable();
+        t.timestamp('expireAt').nullable();
+        t.timestamp('createdAt').notNullable().defaultTo(db.fn.now());
+      });
+    }
+
     if (!await db.schema.hasTable('Calendar')) {
       await db.schema.createTable('Calendar', t => {
         t.date('date').notNullable().primary();
@@ -66,6 +76,7 @@ class OperationSchema extends Schema {
     await db.schema.dropTableIfExists('SystemLog');
     await db.schema.dropTableIfExists('NetworkTraffic');
     await db.schema.dropTableIfExists('Config');
+    await db.schema.dropTableIfExists('BriefCertification');
     await db.schema.dropTableIfExists('Calendar');
   }
 

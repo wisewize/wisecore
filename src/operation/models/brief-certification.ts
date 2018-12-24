@@ -1,20 +1,14 @@
 import Model, { column } from '../../common/model';
 
-class UserTransaction {
+class BriefCertification {
   @column({
     type: 'string',
     max: 60
   })
   code: string;
 
-  @column({
-    type: 'enum',
-    value: ['REGISTER', 'DEREGISTER', 'PASSWORD']
-  })
-  type: string;
-
-  @column({ type: 'key' })
-  userId: number;
+  @column({ type: 'json' })
+  payload: any;
 
   @column({
     type: 'timestamp',
@@ -29,4 +23,4 @@ class UserTransaction {
   createdAt: string;
 }
 
-export default UserTransaction;
+export default BriefCertification;
