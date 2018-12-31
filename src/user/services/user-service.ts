@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as sharp from 'sharp';
+import fs from 'fs';
+import sharp from 'sharp';
 import fetch from 'node-fetch';
 
 import { inject } from '../../common/container';
