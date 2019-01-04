@@ -16,7 +16,10 @@ class UserController extends Controller {
   }
 
   @route('GET', '/users/:userId')
-  @authorize(e => e.hasAuthority('ADMIN'))
+  @authorize(e => e
+    .hasId('params.userId')
+    .or.hasAuthority('ADMIN')
+  )
   async getUser(@pathParam('userId') userId: number) {
     let user = await this.userService.getUser(userId);
 
@@ -61,6 +64,10 @@ class UserController extends Controller {
   }
 
   @route('POST', '/users/:userId/avatar')
+  @authorize(e => e
+    .hasId('params.userId')
+    .or.hasAuthority('ADMIN')
+  )
   async setUserAvatar(@pathParam('userId') userId, @formData('file') file) {
     await this.userService.setUserAvatar(userId, file);
   }
