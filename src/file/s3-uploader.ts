@@ -29,6 +29,7 @@ class S3Uploader extends Uploader {
 
   async uploadFile(localPath, originalName, type) {
     const bucketName = this.config.storage.bucket;
+    const basePath = this.config.storage.basePath;
     const filename = this.getUniqueFileName(originalName);
     const dir = this.getUploadDir(type);
     const uploadPath = dir + '/' + filename;
@@ -45,7 +46,7 @@ class S3Uploader extends Uploader {
         if (err) {
           this.log.error(err, 'an error occured when uploading file to S3');
         } else {
-          resolve(`${bucketName}/${uploadPath}`);
+          resolve(`${basePath}/${uploadPath}`);
         }
       });
     });
