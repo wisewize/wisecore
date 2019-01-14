@@ -45,7 +45,7 @@ class S3Uploader extends Uploader {
         if (err) {
           this.log.error(err, 'an error occured when uploading file to S3');
         } else {
-          resolve(`//${bucketName}/${uploadPath}`);
+          resolve(`${bucketName}/${uploadPath}`);
         }
       });
     });
