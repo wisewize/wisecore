@@ -43,7 +43,11 @@ class NotificationService extends Service {
     });
   }
 
-  @scheduled({ time: '* * * * *', repeat: 1 })
+  @scheduled({
+    time: '* * * * *',
+    repeat: 1,
+    name: 'showStartMessage'
+  })
   async showStartMessage() {
     this.log.info('System has started');
 

@@ -29,7 +29,10 @@ class SystemLogService extends Service {
     return await this.systemLogRepository.getDayStats();
   }
 
-  @scheduled({ time: '*/1 * * * *' })
+  @scheduled({
+    time: '*/1 * * * *',
+    name: 'saveSystemLogs'
+  })
   async saveSystemLogs() {
     let logs = this.logBuffer.flush();
 

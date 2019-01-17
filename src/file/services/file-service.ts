@@ -163,7 +163,10 @@ class FileService extends Service {
     };
   }
 
-  @scheduled({ time: '1 0 * * SUN' })
+  @scheduled({
+    time: '1 0 * * SUN',
+    name: 'deleteUnreferencedFiles'
+  })
   async deleteUnreferencedFiles() {
     if (FileService.deletingUnreferencedFiles) {
       return;

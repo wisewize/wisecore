@@ -121,14 +121,16 @@ interface ScheduleOption {
   time: CronTime,
   repeat?: number;
   start?: boolean;
+  name?: string;
 };
 
 function scheduled(option: ScheduleOption) {
   return function (target: any, key: string, descriptor: PropertyDescriptor) {
     let targetName = target.name || target.constructor.name;
     let callback = target[key];
-    let task = globalTaskManager.addTask(
-      targetName + '.' + callback.name,
+
+    globalTaskManager.addTask(
+      targetName + '.' + (option.name || callback.name),
       option.time,
       option.start || false,
       option.repeat || 0,

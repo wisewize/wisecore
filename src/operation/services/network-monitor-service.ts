@@ -57,7 +57,10 @@ class NetworkMonitorService extends Service {
   }
 
   // 시간당 트래픽 측정 후 초과시 알림
-  @scheduled({ time: '0 * * * *' })
+  @scheduled({
+    time: '0 * * * *',
+    name: 'checkNetworkTrafficOver'
+  })
   async checkNetworkTrafficOver() {
     const traffic = await this.getTodayTraffic();
     const networkConfig = await this.configService.get('network');
@@ -73,7 +76,11 @@ class NetworkMonitorService extends Service {
   }
 
   // 시간당 트래픽 측정 및 통계 반영
-  @scheduled({ time: '0 * * * *', start: true })
+  @scheduled({
+    time: '0 * * * *',
+    start: true,
+    name: 'measureNetworkTraffic'
+  })
   async measureNetworkTraffic() {
     const systemTraffic = await this.measureSystemNetworkTrafficIncrements();
     let traffic = NetworkMonitorService.measuredTraffic;

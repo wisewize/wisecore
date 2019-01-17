@@ -93,7 +93,11 @@ class StorageService extends Service {
   }
 
   // 시간당 스토리지 용량 체크를 하고 알림.
-  @scheduled({ time: '0 * * * *', start: true })
+  @scheduled({
+    time: '0 * * * *',
+    start: true,
+    name: 'checkStorageSize'
+  })
   async checkStorageSize() {
     let usedSize = await this.storageRepository.getUsedSize();
 
