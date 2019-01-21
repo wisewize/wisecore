@@ -81,6 +81,10 @@ class Wisecore {
       }
     });
 
+    console.log('setup network...');
+
+    await this.setupNetwork();
+
     console.log('setup database...');
 
     await this.setupDatabase();
@@ -169,6 +173,28 @@ class Wisecore {
     }
   }
 
+  private async setupNetwork() {
+    // set "representative" IP Address
+    this.container.set('ipAddress', container => {
+      const ctx = container.get('context');
+
+      if (this.config.network && this.config.network.proxy) {
+        if (this.config.network.reversedXff) {
+          return () => ctx.request.ips[0];
+        } else {
+          return () => ctx.request.ip;
+        }
+      } else {
+        return () => ctx.request.ip;
+      }
+    });
+
+    // network proxy setting
+    if (this.config.network && this.config.network.proxy) {
+      this.koa.proxy = true;
+    }
+  }
+
   private async setupDatabase() {
     this.db = knex({
       client: this.config.database.engine,
@@ -177,7 +203,7 @@ class Wisecore {
       useNullAsDefault: true
     });
 
-    this.container.set('transaction', container => {
+    this.container.set('transaction', () => {
       let transaction = new Transaction(this.db, this.log);
 
       return () => transaction;

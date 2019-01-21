@@ -8,11 +8,11 @@ import WebVisitorRepository from '../repositories/web-visitor-repository';
 
 class WebVisitorService extends Service {
   @inject('context') ctx;
-  @inject('configService') configService;
+  @inject() ipAddress;
   @inject() webVisitorRepository: WebVisitorRepository;
 
   async getWebVisitor(visitorId) {
-    let visitor = await this.webVisitorRepository.getOne(visitorId);
+    const visitor = await this.webVisitorRepository.getOne(visitorId);
 
     if (!visitor) {
       throw new NoResourceError();
@@ -26,21 +26,19 @@ class WebVisitorService extends Service {
   }
 
   async getCurrentWebVisitorId() {
-    let networkConfig = this.configService.get('network');
-    let ipAddress = (networkConfig && networkConfig.reversedXff) ? this.ctx.request.ips[0] || this.ctx.request.ip : this.ctx.request.ip;
-    let userAgent = this.ctx.request.get('user-agent');
-    let visitorId = await this.fetchWebVisitorId(ipAddress, userAgent);
+    const userAgent = this.ctx.request.get('user-agent');
+    const visitorId = await this.fetchWebVisitorId(this.ipAddress, userAgent);
 
     return visitorId;
   }
 
   async fetchWebVisitorId(ipAddress: string, userAgent: string) {
-    let hash = crypto.createHash('md5').update(ipAddress + '-' + userAgent).digest('hex');
-    let visitor = await this.webVisitorRepository.getOneByHash(hash);
+    const hash = crypto.createHash('md5').update(ipAddress + '-' + userAgent).digest('hex');
+    const visitor = await this.webVisitorRepository.getOneByHash(hash);
 
     if (!visitor) {
-      let agent = useragent.parse(userAgent);
-      let browser = agent.family;
+      const agent = useragent.parse(userAgent);
+      const browser = agent.family;
 
       return await this.webVisitorRepository.create({
         hash,

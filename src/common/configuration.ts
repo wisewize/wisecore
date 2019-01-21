@@ -12,6 +12,7 @@ interface UserConfiguration {
 }
 
 interface NetworkConfiguration {
+  proxy?: boolean;
   reversedXff?: boolean;
   trafficSize?: number;
 }
