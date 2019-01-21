@@ -11,7 +11,7 @@ class WebVisitorTrackService extends Service {
   @inject('auth') auth;
 
   async getWebVisitorTrack(trackId) {
-    let track = await this.webVisitorTrackRepository.getOne(trackId);
+    const track = await this.webVisitorTrackRepository.getOne(trackId);
 
     if (!track) {
       throw new NoResourceError();
@@ -24,12 +24,16 @@ class WebVisitorTrackService extends Service {
     return await this.webVisitorTrackRepository.getCollection(pagination);
   }
 
-  async createWebVisitorTrack() {
-    let user = this.auth.user;
-    let referer = this.ctx.request.get('referer');
-    let visitorId = await this.webVisitorService.getCurrentWebVisitorId();
+  async createWebVisitorTrack(referer?: string) {
+    const user = this.auth.user;
+    const visitorId = await this.webVisitorService.getCurrentWebVisitorId();
+    const httpReferer = this.ctx.request.get('referer');
 
-    return await this.webVisitorTrackRepository.create({ userId: user && user.id, visitorId, referer });
+    return await this.webVisitorTrackRepository.create({
+      userId: user && user.id,
+      visitorId,
+      referer: (referer || httpReferer).toString().substring(0, 255)
+    });
   }
 }
 

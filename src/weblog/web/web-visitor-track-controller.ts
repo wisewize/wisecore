@@ -1,5 +1,5 @@
 import { inject } from '../../common/container';
-import Controller, { route, pathParam, paginated, authorize } from '../../common/controller';
+import Controller, { route, pathParam, paginated, authorize, queryParam } from '../../common/controller';
 import WebVisitorTrackService from '../services/web-visitor-track-service';
 
 class WebVisitorTrackController extends Controller {
@@ -18,8 +18,8 @@ class WebVisitorTrackController extends Controller {
   }
 
   @route('POST', '/web-visitor-tracks')
-  async createWebVisitorTrack() {
-    let insertId = await this.webVisitorTrackService.createWebVisitorTrack();
+  async createWebVisitorTrack(@queryParam('referer') referer) {
+    let insertId = await this.webVisitorTrackService.createWebVisitorTrack(referer);
 
     return `/web-visitor-tracks/${insertId}`;
   }
