@@ -14,6 +14,7 @@ import Transaction from './transaction';
 import PackageScanner from './package-scanner';
 import Container, { ContainerProviderMiddleware } from './container';
 import Authorization from './authorization';
+import FetchExpression from './fetch-expression';
 
 import { ErrorHandlerMiddleware, NoResourceError } from './errors';
 import CorsMiddleware from './cors-middleware';
@@ -23,7 +24,10 @@ import { NetworkTrafficSize } from './util';
 import Configuration from './configuration';
 
 class Wisecore {
+  private static fetchExpression = new FetchExpression();
+  private static contextExpressionCache = {};
   private koa: Koa;
+  private intialized: boolean = false;
 
   public server: any;
   public test: any = null;
@@ -38,7 +42,6 @@ class Wisecore {
   public mode: string = process.env.NODE_ENV ? process.env.NODE_ENV.toLowerCase().trim() : 'development';
   public config: Configuration;
   public scanner = new PackageScanner();
-  private intialized: boolean = false;
 
   constructor(defaultConfig: Configuration = {}) {
     this.koa = new Koa();
@@ -74,7 +77,7 @@ class Wisecore {
     // 'fetch' here is not related to Fetch API.
     Object.defineProperty(this.koa.context, 'fetch', {
       get: function () {
-        return Wisecore.fetchContextValue.bind(this, this);
+        return Wisecore.fetchContextExpression.bind(this, this);
       }
     });
 
@@ -273,80 +276,42 @@ class Wisecore {
     }
   }
 
-  /**
-   * 문자열을 파싱하여 컨텍스트로부터 값을 추출한다.
-   * 
-   * 예)
-   *  - URL 파라미터: params.id
-   *  - 쿼리 파라미터: query.limit
-   *  - DB 테이블: User(1).username
-   *  - 응답 바디(컨트롤러 실행 후): returnValue
-   *  - 단순 숫자: 17
-   * @param ctx Koa 컨텍스트
-   * @param key
-   */
-  static async fetchContextValue(ctx: any, key: any) {
-    let num = Number(key);
-
-    // 단순 숫자인지?
-    if (!Number.isNaN(num)) {
-      return num;
-    }
-
-    // 응답 바디인지?
-    if (key === 'returnValue') {
-      let result = ctx.body;
-
-      if (Array.isArray(result)) {
-        return result.map(entry => entry.id);
-      } else {
-        return result.id;
+  private static async fetchContextValue(ctx, name, key, params) {
+    // Is a value from a database model?
+    //   ex) File(params.fileId).ownerId
+    // In above example, "File" is a table name and "params.fileId" is an argument for the table model
+    // that is actually a shortened form of "id=params.fileId" so generated SQL query would be like this:
+    //   select ownerId from File where id="params.fileId"
+    // And params.fileId will be fetched from URL parameters if the endpoint is given with path
+    // variables as "/files/:fileId".
+    if (params) {
+      if (!key) {
+        throw new Error(`Wisecore.fetchContextValue: Invalid expression: ${name}`);
       }
-    }
 
-    // DB 모델에서 직접 가져와야 하는 데이터인지?
-    // 예) File(params.fileId).ownerId
-    // 위 예제의 경우 File은 조회할 테이블명, params.fileId는 targetContextValue로 재귀조회 대상이며
-    // targetContextValue는 {targetColumn}={targetContextValue}로 나눠서 특정 컬럼에 대한 조회를 명시할 수 있다.
-    // ownerId는 fetchColumn에 대입되며, 최종적으로 조회되는 컬럼을 의미한다. (생략할 경우 기본키를 조회)
-    const fetchModelRegex = /(\w+)\((.+)\)\.?(\w*)/;
-    let result = fetchModelRegex.exec(key);
-
-    if (result) {
-      let metadata = Model.getMetadataByName(result[1]);
-      let fetchColumn = result[3] ? result[3] : metadata.pkColumns[0];
+      const metadata = Model.getMetadataByName(name);
 
       if (!metadata) {
-        throw new Error(`존재하지 않는 모델명(${result[1]})입니다.`);
+        throw new Error(`Wisecore.fetchContextValue: Unknown model name: ${name}`);
       }
-
-      // 등호를 이용하여 특정 컬럼에 대해 조회할 수 있다.
-      // 예) name=params.pageName
-      let targetResult = result[2].split('=');
-      let targetContextValue = targetResult.length > 1 ? targetResult[1] : targetResult[0];
-      let targetColumn = targetResult.length > 1 ? targetResult[0] : metadata.pkColumns[0];
-
-      let columnValue = await Wisecore.fetchContextValue(ctx, targetContextValue);
-
-      // 조회할 컬럼의 값이 null인 경우 모델의 값도 null로 간주하여 바로 반환한다. 
-      if (columnValue === null) {
-        return null;
-      }
-      
-      let cacheKey = `${metadata.tableName}.${targetColumn}(${columnValue})`;
-      let entity = null;
 
       if (!ctx._contextValueCache) {
         ctx._contextValueCache = {};
       }
 
-      if (ctx._contextValueCache[cacheKey]) {
-        entity = ctx._contextValueCache[cacheKey];
-      } else {
+      let cacheKey = metadata.tableName;
+
+      for (const key in params) {
+        cacheKey += '.' + key + '(' + params[key] + ')';
+      }
+
+      let entity = ctx._contextValueCache[cacheKey];
+
+      if (!entity) {
         entity = await ctx.container.get('db')
           .first()
           .from(metadata.tableName)
-          .where(targetColumn, columnValue);
+          .where(params);
 
         ctx._contextValueCache[cacheKey] = entity;
       }
@@ -355,34 +320,76 @@ class Wisecore {
         throw new NoResourceError();
       }
 
-      return entity[fetchColumn];
+      return entity[key];
     }
 
-    // URL 파라미터 값인지?
-    if (key.indexOf('params.') === 0) {
-      const paramName = key.substring(7);
-      const value = Number(ctx.params[paramName]);
+    switch (name) {
+      // Is a value from URL parameters?
+      case 'params': {
+        const value = Number(ctx.params[key]);
 
-      if (Number.isNaN(value)) {
-        return ctx.params[paramName];
-      } else {
-        return value;
+        if (Number.isNaN(value)) {
+          return ctx.params[key];
+        } else {
+          return value;
+        }
+      }
+      // Is a value from querystring?
+      case 'query': {
+        const value = Number(ctx.query[key]);
+
+        if (Number.isNaN(value)) {
+          return ctx.query[key];
+        } else {
+          return value;
+        }
+      }
+      // Is a value from response body?
+      case 'returnValue': {
+        const result = ctx.body;
+
+        if (Array.isArray(result)) {
+          return result.map(entry => entry.id);
+        } else {
+          return result.id;
+        }
+      }
+      default: {
+        const num = Number(name);
+
+        // Is a just number?
+        if (!Number.isNaN(num)) {
+          return num;
+        }
+
+        throw new Error(`Wisecore.fetchContextValue: Invalid argument: ${name}`);
       }
     }
+  }
 
-    // URL 쿼리 값인지?
-    if (key.indexOf('query.') === 0) {
-      const queryName = key.substring(6);
-      const value = Number(ctx.query[queryName]);
+  /**
+   * Parse a string and fetch a value from it.
+   * 
+   * ex)
+   *  - URL parameter: params.id
+   *  - Querystring: query.limit
+   *  - DB Table: User(1).username
+   *  - Reponse body: returnValue
+   *  - Number: 17
+   * @param ctx Koa context
+   * @param expression
+   */
+  static async fetchContextExpression(ctx: any, expression: string) {
+    // Cache parsing results by string expressions.
+    let instructions = Wisecore.contextExpressionCache[expression];
 
-      if (Number.isNaN(value)) {
-        return ctx.query[queryName];
-      } else {
-        return value;
-      }
+    if (!instructions) {
+      const root = Wisecore.fetchExpression.parse(expression);
+      instructions = Wisecore.fetchExpression.getInstructionStack(root);
+      Wisecore.contextExpressionCache[expression] = instructions;
     }
 
-    throw new Error(`잘못된 인수(${key})입니다.`);
+    return await Wisecore.fetchExpression.evaluate(instructions, Wisecore.fetchContextValue.bind(null, ctx));
   }
 }
 
